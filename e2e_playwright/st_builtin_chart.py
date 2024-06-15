@@ -56,6 +56,7 @@ color_df = pd.DataFrame(
     }
 )
 
+# TODO: Move each chart type to a separate file - remove indexed snaps where possible
 st.header("Area Chart")
 
 st.area_chart()
