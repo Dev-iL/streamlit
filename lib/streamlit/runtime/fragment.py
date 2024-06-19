@@ -36,8 +36,7 @@ Fragment = Callable[[], Any]
 
 
 class FragmentStorage(Protocol):
-    """A key-value store for Fragments. Used to implement the @st.experimental_fragment
-    decorator.
+    """A key-value store for Fragments. Used to implement the @st.fragment decorator.
 
     We intentionally define this as its own protocol despite how generic it appears to
     be at first glance. The reason why is that, in any case where fragments aren't just
@@ -252,7 +251,7 @@ def fragment(
 ) -> Callable[[F], F]: ...
 
 
-@gather_metrics("experimental_fragment")
+@gather_metrics("fragment")
 def fragment(
     func: F | None = None,
     *,
@@ -319,14 +318,14 @@ def fragment(
     Examples
     --------
     The following example demonstrates basic usage of
-    ``@st.experimental_fragment``. As an anology, "inflating balloons" is a
-    slow process that happens outside of the fragment. "Releasing balloons" is
-    a quick process that happens inside of the fragment.
+    ``@st.fragment``. As an analogy, "inflating balloons" is a slow process that happens
+    outside of the fragment. "Releasing balloons" is a quick process that happens inside
+    of the fragment.
 
     >>> import streamlit as st
     >>> import time
     >>>
-    >>> @st.experimental_fragment
+    >>> @st.fragment
     >>> def release_the_balloons():
     >>>     st.button("Release the balloons", help="Fragment rerun")
     >>>     st.balloons()
@@ -354,14 +353,14 @@ def fragment(
     >>>     st.session_state.app_runs = 0
     >>>     st.session_state.fragment_runs = 0
     >>>
-    >>> @st.experimental_fragment
-    >>> def fragment():
+    >>> @st.fragment
+    >>> def my_fragment():
     >>>     st.session_state.fragment_runs += 1
     >>>     st.button("Rerun fragment")
     >>>     st.write(f"Fragment says it ran {st.session_state.fragment_runs} times.")
     >>>
     >>> st.session_state.app_runs += 1
-    >>> fragment()
+    >>> my_fragment()
     >>> st.button("Rerun full app")
     >>> st.write(f"Full app says it ran {st.session_state.app_runs} times.")
     >>> st.write(f"Full app sees that fragment ran {st.session_state.fragment_runs} times.")
@@ -378,7 +377,7 @@ def fragment(
     >>> if "clicks" not in st.session_state:
     >>>     st.session_state.clicks = 0
     >>>
-    >>> @st.experimental_fragment
+    >>> @st.fragment
     >>> def count_to_five():
     >>>     if st.button("Plus one!"):
     >>>         st.session_state.clicks += 1

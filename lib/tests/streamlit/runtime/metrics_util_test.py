@@ -275,6 +275,8 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "experimental_connection",
             "spinner",
             "progress",
+            # `experimental_fragment` is tracked along with `fragment`
+            "experimental_fragment",
         }
 
         # Create a list of all public API names in the `st` module (minus

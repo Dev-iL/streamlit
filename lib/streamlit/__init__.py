@@ -236,9 +236,14 @@ column_config = _column_config
 # Connection
 connection = _connection
 
+# Fragment and dialog
+fragment = _fragment
+
 # Experimental APIs
 experimental_dialog = _dialog_decorator
-experimental_fragment = _fragment
+experimental_fragment = _deprecate_func_name(
+    fragment, "experimental_fragment", "2025-01-01"
+)
 experimental_memo = _experimental_memo
 experimental_singleton = _experimental_singleton
 experimental_user = _UserInfoProxy()
