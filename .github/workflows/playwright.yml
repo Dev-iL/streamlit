@@ -51,6 +51,10 @@ jobs:
           cd e2e_playwright
           rm -rf ./test-results
           pytest --ignore ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1 -m "not performance"
+      - name: Run dataframe selection playwright tests
+        run: |
+          cd e2e_playwright
+          pytest dataframe_selection_test.py --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html
       - name: Upload failed test results
         uses: actions/upload-artifact@v4
         if: always()

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: INP001
+
 import os
 import sys
 from pathlib import Path
@@ -21,7 +23,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.45.0"  # PEP-440
+VERSION = "1.45.1"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -93,7 +95,7 @@ class VerifyVersionCommand(install):
 
 readme_path = THIS_DIRECTORY / ".." / "README.md"
 if readme_path.exists():
-    long_description = readme_path.read_text()
+    long_description = readme_path.read_text(encoding="utf-8")
 else:
     # In some build environments (specifically in conda), we may not have the README file
     # readily available. In these cases, just let long_description be the empty string.

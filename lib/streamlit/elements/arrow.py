@@ -64,13 +64,20 @@ if TYPE_CHECKING:
 
 
 SelectionMode: TypeAlias = Literal[
-    "single-row", "multi-row", "single-column", "multi-column"
+    "single-row",
+    "multi-row",
+    "single-column",
+    "multi-column",
+    "single-cell",
+    "multi-cell",
 ]
 _SELECTION_MODES: Final[set[SelectionMode]] = {
     "single-row",
     "multi-row",
     "single-column",
     "multi-column",
+    "single-cell",
+    "multi-cell",
 }
 
 
@@ -93,7 +100,7 @@ class DataframeSelectionState(TypedDict, total=False):
         The selected rows, identified by their integer position. The integer
         positions match the original dataframe, even if the user sorts the
         dataframe in their browser. For a ``pandas.DataFrame``, you can
-        retrieve data from its interger position using methods like ``.iloc[]``
+        retrieve data from its integer position using methods like ``.iloc[]``
         or ``.iat[]``.
     columns : list[str]
         The selected columns, identified by their names.
@@ -207,6 +214,22 @@ def parse_selection_mode(
             "Only one of `single-column` or `multi-column` can be selected as selection mode."
         )
 
+    if selection_mode_set.issuperset({"single-cell", "multi-cell"}):
+        raise StreamlitAPIException(
+            "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
+        )
+
+    is_cell_mode_chosen = bool(
+        selection_mode_set.intersection({"single-cell", "multi-cell"})
+    )
+    is_rc_mode_chosen = bool(
+        selection_mode_set.difference({"single-cell", "multi-cell"})
+    )
+    if is_cell_mode_chosen and is_rc_mode_chosen:
+        raise StreamlitAPIException(
+            "Row or column selection modes cannot be enabled alongside cell selection modes."
+        )
+
     parsed_selection_modes = []
     for mode in selection_mode_set:
         if mode == "single-row":
@@ -217,6 +240,10 @@ def parse_selection_mode(
             parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_COLUMN)
         elif mode == "multi-column":
             parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_COLUMN)
+        elif mode == "single-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_CELL)
+        elif mode == "multi-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_CELL)
     return set(parsed_selection_modes)
 
 
@@ -327,7 +354,7 @@ class ArrowMixin:
             Desired height of the dataframe expressed in pixels. If ``height``
             is ``None`` (default), Streamlit sets the height to show at most
             ten rows. Vertical scrolling within the dataframe element is
-            enabled when the height does not accomodate all rows.
+            enabled when the height does not accommodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
@@ -370,7 +397,7 @@ class ArrowMixin:
 
             - A column type within ``st.column_config``: Streamlit applies the
               defined configuration to the column. For example, use
-              ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")``
+              ``st.column_config.NumberColumn("Dollar values", format="$ %d")``
               to change the displayed name of the column to "Dollar values"
               and add a "$" prefix in each cell. For more info on the
               available column types and config options, see
@@ -406,7 +433,7 @@ class ArrowMixin:
               as a dictionary.
 
         selection_mode : "single-row", "multi-row", "single-column", \
-            "multi-column", or Iterable of these
+            "multi-column", "single-cell", "multi-cell", or Iterable of these
             The types of selections Streamlit should allow when selections are
             enabled with ``on_select``. This can be one of the following:
 
@@ -414,8 +441,12 @@ class ArrowMixin:
             - "single-row": Only one row can be selected at a time.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
+            - "multi-cell": Multiple cells can be selected at a time.
+            - "single-cell": Only one cell can be selected at a time.
             - An ``Iterable`` of the above options: The table will allow
-              selection based on the modes specified.
+              selection based on the modes specified. However, if cell
+              selection modes are enabled, row and column selection modes
+              must not be.
 
             When column selections are enabled, column sorting is disabled.
 
@@ -563,7 +594,7 @@ class ArrowMixin:
         if use_container_width is None:
             # If use_container_width was not explicitly set by the user, we set
             # it to True if width was not set explicitly, and False otherwise.
-            use_container_width = True if width is None else False
+            use_container_width = width is None
 
         proto.use_container_width = use_container_width
 
@@ -645,8 +676,7 @@ class ArrowMixin:
             )
             self.dg._enqueue("arrow_data_frame", proto)
             return cast("DataframeState", widget_state.value)
-        else:
-            return self.dg._enqueue("arrow_data_frame", proto)
+        return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")
     def table(self, data: Data = None) -> DeltaGenerator:
@@ -733,7 +763,7 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_table", proto)
 
     @gather_metrics("add_rows")
-    def add_rows(self, data: Data = None, **kwargs) -> DeltaGenerator | None:
+    def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -789,7 +819,7 @@ class ArrowMixin:
         ... )
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
-        """
+        """  # noqa: E501
         return _arrow_add_rows(self.dg, data, **kwargs)
 
     @property
@@ -948,14 +978,15 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         This attribute is optional and only used for pandas.Styler, other elements
         (e.g. charts) can ignore it.
 
-    """
+    """  # noqa: E501
 
     if dataframe_util.is_pandas_styler(data):
         # default_uuid is a string only if the data is a `Styler`,
         # and `None` otherwise.
-        assert isinstance(default_uuid, str), (
-            "Default UUID must be a string for Styler data."
-        )
+        if not isinstance(default_uuid, str):
+            raise StreamlitAPIException(
+                "Default UUID must be a string for Styler data."
+            )
         marshall_styler(proto, data, default_uuid)
 
     proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)
